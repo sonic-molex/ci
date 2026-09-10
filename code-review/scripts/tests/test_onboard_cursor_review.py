@@ -22,7 +22,7 @@ class OnboardingTest(unittest.TestCase):
 
     def test_cross_repo_entrypoint_preserves_consumer_context(self):
         text = m.render('release/v1', 'team/shared', 'abc123')
-        self.assertIn('"team/shared/.github/actions/cursor-review@abc123"', text)
+        self.assertIn('"team/shared/code-review@abc123"', text)
         self.assertIn('branches: ["release/v1"]', text)
         self.assertIn('${{ secrets.CURSOR_API_KEY }}', text)
         self.assertIn('head.repo.full_name == github.repository', text)

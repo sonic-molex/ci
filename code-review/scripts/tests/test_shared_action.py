@@ -35,7 +35,7 @@ class SharedActionTest(unittest.TestCase):
                        CURSOR_API_KEY='test-only', CURSOR_MODEL='test-model',
                        GITHUB_TOKEN='', GITHUB_API_URL='', PR_NUMBER='1',
                        PR_DIFF_BASE_SHA=base, PR_HEAD_SHA=head)
-            result = subprocess.run(['bash', str(ROOT / '.github/actions/cursor-review/review.sh')],
+            result = subprocess.run(['bash', str(ROOT / 'review.sh')],
                                     cwd=consumer, env=env, text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             prompt = (consumer / 'received-prompt.txt').read_text()

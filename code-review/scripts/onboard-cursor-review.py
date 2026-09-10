@@ -14,7 +14,7 @@ from urllib.parse import quote, urlencode
 
 SHARED_REPO = 'sonic-molex/ci'
 WORKFLOW = '.github/workflows/code-review-cursor.yml'
-ACTION = '.github/actions/cursor-review'
+ACTION = 'code-review'
 MARKER = '# Managed by onboard-cursor-review.py\n'
 
 
