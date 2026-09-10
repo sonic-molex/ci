@@ -1,0 +1,56 @@
+name: Cursor C/C++ PR review
+description: Shared Cursor review, PR comments and artifacts; credentials belong to the caller.
+inputs:
+  cursor-api-key:
+    description: The calling repository's CURSOR_API_KEY secret
+    required: true
+  github-token:
+    description: The calling workflow token with pull-requests write permission
+    required: true
+  max-review-files:
+    description: Maximum C/C++ files reviewed per PR
+    default: '15'
+runs:
+  using: composite
+  steps:
+    - name: Resolve PR diff base
+      shell: bash
+      env:
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        echo "PR_DIFF_BASE_SHA=$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")" >> "$GITHUB_ENV"
+
+    - name: Install Cursor CLI
+      shell: bash
+      run: |
+        cli_dir="$RUNNER_TEMP/cursor-agent"
+        mkdir -p "$cli_dir"
+        curl --fail --silent --show-error --location \
+          https://downloads.cursor.com/lab/2026.09.08-6caf4ff/linux/x64/agent-cli-package.tar.gz \
+          | tar --strip-components=1 -xzf - -C "$cli_dir"
+        echo "$cli_dir" >> "$GITHUB_PATH"
+        "$cli_dir/cursor-agent" --version
+        jq --version
+
+    - name: Review and comment on PR
+      shell: bash
+      env:
+        REVIEW_ACTION_PATH: ${{ github.action_path }}
+        CURSOR_API_KEY: ${{ inputs.cursor-api-key }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        CURSOR_MODEL: cursor-grok-4.6-high
+        MAX_REVIEW_FILES: ${{ inputs.max-review-files }}
+        PR_SOURCE: ${{ github.event.pull_request.head.ref }}
+        PR_TARGET: ${{ github.event.pull_request.base.ref }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: bash "$REVIEW_ACTION_PATH/review.sh"
+
+    - name: Upload review artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cursor-review-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: cursor_review_results/
+        retention-days: 30
