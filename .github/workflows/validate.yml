@@ -1,0 +1,23 @@
+name: Validate shared review
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test onboarding and consumer execution
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Check review script syntax
+        run: bash -n .github/actions/cursor-review/review.sh
+      - name: Check whitespace
+        run: git diff --check
