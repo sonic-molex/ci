@@ -1,4 +1,16 @@
-# Shared Cursor PR review
+# Shared CI pipelines
+
+`sonic-molex/ci` is the public home for shared CI pipeline implementations across
+SONiC Molex repositories. Code review is the first capability; shared build,
+compilation and packaging pipelines will also be maintained here as they are
+added. Business repositories keep thin entry workflows and their own secrets.
+
+Put reusable job-level pipelines in `.github/workflows/`, composite actions in
+`.github/actions/`, and supporting setup tools in `scripts/`. Document each
+capability's inputs, permissions and consumer integration here. Build and
+packaging pipelines are planned; they are not implemented by this PR.
+
+## Cursor PR review
 
 The implementation lives in this repository's
 [composite action](.github/actions/cursor-review/action.yml): CLI installation,
@@ -16,7 +28,7 @@ built-in `GITHUB_TOKEN`; no additional PAT is stored in Actions.
 ## One-command onboarding
 
 After the initial shared-action PR is reviewed and manually merged into `main`,
-run from a checkout of `sonic-molex/code-review`:
+run from a checkout of `sonic-molex/ci`:
 
 ```sh
 python3 scripts/onboard-cursor-review.py --repo sonic-molex/TARGET_REPOSITORY
@@ -64,7 +76,7 @@ credential source. The script configures it but does not make a billable model
 request to validate it. Repository/ref preflight cannot prove Secrets write
 permission; failed uploads are reported per repository.
 
-The default shared reference is `sonic-molex/code-review@main`.
+The default shared reference is `sonic-molex/ci@main`.
 Central action updates therefore reach all consumers on their next run, without
 copying scripts or opening an update PR in every repository. `--shared-ref` can
 instead select a tag or full commit SHA; pinned consumers must update their
@@ -125,7 +137,7 @@ bash -n .github/actions/cursor-review/review.sh
 
 ## Repository boundaries and rollout
 
-- `sonic-molex/code-review`: shared action, review script/prompt, onboarding and
+- `sonic-molex/ci`: shared action, review script/prompt, onboarding and
   rotation script, tests and documentation. No Cursor key is configured here.
 - Each consumer (including `sonic-optical-control`): one generated workflow plus
   its repository-local `CURSOR_API_KEY`. No copied implementation or setup tools.

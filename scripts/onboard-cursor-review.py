@@ -12,7 +12,7 @@ import subprocess
 import sys
 from urllib.parse import quote, urlencode
 
-SHARED_REPO = 'sonic-molex/code-review'
+SHARED_REPO = 'sonic-molex/ci'
 WORKFLOW = '.github/workflows/code-review-cursor.yml'
 ACTION = '.github/actions/cursor-review'
 MARKER = '# Managed by onboard-cursor-review.py\n'
