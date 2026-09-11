@@ -25,7 +25,8 @@ class SelectionTest(unittest.TestCase):
             'Dockerfile.j2', 'Dockerfile.build', 'Makefile', 'Makefile.work', 'rules.mk',
             'CMakeLists.txt', 'build.cmake', 'configure.ac', 'Makefile.am',
             'template.j2', 'service.service', 'debian/control', 'debian/postinst',
-            'sonic.install', 'go.mod', 'requirements-dev.txt',
+            'sonic.install', 'go.mod', 'requirements-dev.txt', 'sai.profile',
+            'rules.dep', 'external-changes.patch', 'fix.diff', 'sonic.postinst', 'model.yangjson',
         ]
         with tempfile.TemporaryDirectory() as directory:
             for name in names:

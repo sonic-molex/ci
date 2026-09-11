@@ -117,9 +117,9 @@ Model usage is charged to the account associated with each repository's key.
 | Source | C/C++, Go, Python, Rust, JavaScript/TypeScript, Lua, Perl, Ruby, Java |
 | Scripts | Shell (`.sh`, `.bash`, `.ksh`, `.zsh`) and extensionless shebang scripts |
 | Interfaces | YANG, Thrift, Protobuf |
-| Configuration | **`.yml` and `.yaml`**, including GitHub Actions; JSON, TOML, INI, CFG, CONF, XML |
+| Configuration | **`.yml` and `.yaml`**, including GitHub Actions; JSON, TOML, INI, CFG, CONF, XML, `.profile`, `.yangjson` |
 | Templates | Jinja/Jinja2 (`.j2`, `.jinja`, `.jinja2`), `.tmpl`, `.template`, `.in` |
-| Build/deployment | Makefile and `.mk`, Dockerfile/Containerfile variants, CMake, Autotools, Meson, systemd unit files, Debian packaging controls |
+| Build/deployment | Makefile and `.mk`/`.dep`, Dockerfile/Containerfile variants, CMake, Autotools, Meson, systemd unit files, Debian packaging controls and maintainer scripts, `.patch`/`.diff` |
 | Dependency manifests | `go.mod`, `requirements*.txt`, JSON/TOML manifests such as `package.json` and `Cargo.toml` |
 
 The exact allowlist is in [select_files.py](select_files.py). Documentation,

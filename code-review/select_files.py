@@ -12,10 +12,12 @@ EXTENSIONS = {
     '.rs', '.lua', '.js', '.jsx', '.ts', '.tsx', '.java', '.rb',
     '.yang', '.thrift', '.proto',
     '.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf', '.xml',
-    '.j2', '.jinja', '.jinja2', '.tmpl', '.template', '.in',
-    '.mk', '.mak', '.cmake', '.am', '.ac', '.m4', '.dockerfile',
+    '.j2', '.jinja', '.jinja2', '.tmpl', '.template', '.in', '.yangjson',
+    '.mk', '.mak', '.cmake', '.am', '.ac', '.m4', '.dockerfile', '.dep', '.profile',
+    '.patch', '.diff',
     '.service', '.socket', '.timer', '.target', '.path', '.mount',
     '.install', '.links', '.dirs', '.symbols', '.conffiles',
+    '.preinst', '.postinst', '.prerm', '.postrm', '.triggers',
 }
 NAMES = {
     'makefile', 'gnumakefile', 'dockerfile', 'containerfile', 'cmakelists.txt',
