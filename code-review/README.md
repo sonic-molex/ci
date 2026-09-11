@@ -95,13 +95,13 @@ replace the key in jobs that are already running. Keep the inventory current.
 
 ## Review behavior
 
-Review policy remains the port from Shasta
+Review derives from the port from Shasta
 `c45741109495652c809a1da326eeeccf334d0310` introduced in
 [sonic-optical-control PR #18](https://github.com/sonic-molex/sonic-optical-control/pull/18):
 
-- Model `cursor-grok-4.6-high` and the original prompt.
-- C/C++ files only; up to 15 files per PR, 1,000 diff lines per file.
-- Commit patch IDs restored from the first 100 PR conversation comments.
+- Model `cursor-grok-4.6-high`; the bug-focused prompt also covers scripts, schemas, configuration and builds.
+- Source, interface, configuration and build files; up to 15 files per PR, 1,000 diff lines per file.
+- Commit patch IDs restored from the first 100 PR conversation comments using the scope-v2 marker.
 - New commit diffs reviewed per file; exact `✅ No bugs found` handling.
 - Markdown PR conversation comment and original JSON/report artifacts.
 - Same-repository PRs only, with a non-blocking job; no normal push trigger.
@@ -109,6 +109,33 @@ Review policy remains the port from Shasta
 Existing patch-ID tracking, truncation and failure-handling limitations remain.
 The GitLab Code Quality JSON is downloadable; GitHub does not render its widget.
 Model usage is charged to the account associated with each repository's key.
+
+### File coverage
+
+| Category | Covered examples |
+| --- | --- |
+| Source | C/C++, Go, Python, Rust, JavaScript/TypeScript, Lua, Perl, Ruby, Java |
+| Scripts | Shell (`.sh`, `.bash`, `.ksh`, `.zsh`) and extensionless shebang scripts |
+| Interfaces | YANG, Thrift, Protobuf |
+| Configuration | **`.yml` and `.yaml`**, including GitHub Actions; JSON, TOML, INI, CFG, CONF, XML |
+| Templates | Jinja/Jinja2 (`.j2`, `.jinja`, `.jinja2`), `.tmpl`, `.template`, `.in` |
+| Build/deployment | Makefile and `.mk`, Dockerfile/Containerfile variants, CMake, Autotools, Meson, systemd unit files, Debian packaging controls |
+| Dependency manifests | `go.mod`, `requirements*.txt`, JSON/TOML manifests such as `package.json` and `Cargo.toml` |
+
+The exact allowlist is in [select_files.py](select_files.py). Documentation,
+dependency lockfiles, binary data, symlinks, deleted files and submodule pointers
+are excluded. There is no blanket exclusion of generated C/C++ or vendor source.
+Submodule source changes are not expanded. `file_selection.json` in artifacts
+records eligible files and exclusion reasons whenever there are new patch IDs;
+the existing 15-file budget is applied after selection. An unchanged rerun skips
+selection and the model as before. Existing branch triggers are not broadened.
+
+Scope-v2 uses `cursor-reviewed-patchids-v2`. Old C/C++-only markers are not reused:
+the first run on an existing PR reconsiders its commits so previously omitted
+languages are reviewed. Subsequent v2 runs retain patch-ID deduplication. There
+is no automatic backfill of closed PRs, and no model retraining or language-specific
+compiler validation. Consumers using `@main` receive this change after a human
+merges the shared PR; no consumer entrypoint update is required.
 
 Consumer configuration:
 

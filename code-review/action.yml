@@ -1,4 +1,4 @@
-name: Cursor C/C++ PR review
+name: Cursor multi-language PR review
 description: Shared Cursor review, PR comments and artifacts; credentials belong to the caller.
 inputs:
   cursor-api-key:
@@ -8,7 +8,7 @@ inputs:
     description: The calling workflow token with pull-requests write permission
     required: true
   max-review-files:
-    description: Maximum C/C++ files reviewed per PR
+    description: Maximum source, interface, configuration and build files reviewed per PR
     default: '15'
 runs:
   using: composite

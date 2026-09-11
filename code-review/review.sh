@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Port of Shasta c45741109495652c809a1da326eeeccf334d0310:
-# ci/templates/code-review-cursor.yml. Review policy/limits are unchanged.
+# ci/templates/code-review-cursor.yml. Model/limits retained; multi-language scope v2.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CURSOR_REVIEW_PROMPT_TEMPLATE="$(cat "$SCRIPT_DIR/cursor-review-prompt.txt")"
 # Cursor CLI Code Review for GitHub Pull Requests (ported from Shasta)
@@ -82,6 +82,7 @@ mkdir -p cursor_review_results
 REVIEW_OUTPUT="cursor_review_results/review_report.md"
 REVIEWED_PATCH_FILE="cursor_review_results/reviewed_patch_ids.txt"
 CURRENT_PATCH_FILE="cursor_review_results/current_patch_commit_map.tsv"
+PATCH_ID_MARKER="cursor-reviewed-patchids-v2"
 NEW_PATCH_FILE="cursor_review_results/new_patch_ids.txt"
 NEW_COMMIT_FILE="cursor_review_results/new_commits.txt"
 : > "$REVIEWED_PATCH_FILE"
@@ -97,7 +98,7 @@ if [ -n "$GITHUB_API_URL" ] && [ "$MR_IID" != "N/A" ] && [ -n "$TOKEN" ]; then
         --header "$TOKEN_HEADER: $TOKEN_VALUE" \
         "$NOTES_API_URL" 2>/dev/null); then
         echo "$MR_NOTES_JSON" | jq -r '.[].body // ""' | \
-            sed -n 's/.*<!-- cursor-reviewed-patchids:\([0-9a-fA-F, ]*\) -->.*/\1/p' | \
+            sed -n "s/.*<!-- ${PATCH_ID_MARKER}:\([0-9a-fA-F, ]*\) -->.*/\1/p" | \
             tr ',' '\n' | tr -d ' ' | sed '/^$/d' | tr 'A-F' 'a-f' | sort -u > "$REVIEWED_PATCH_FILE"
         echo "Loaded reviewed patch-ids: $(wc -l < "$REVIEWED_PATCH_FILE")"
     else
@@ -159,15 +160,17 @@ echo "Changed Files:"
 echo "$CHANGED_FILES"
 echo ""
 
-# Filter for C/C++ code files only
-CODE_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(cpp|c|h|hpp|cc|cxx|hxx)$' || echo "")
+# Select source, interface, configuration and build changes; record exclusions.
+CODE_FILES=$(python3 "$SCRIPT_DIR/select_files.py" \
+    --commits-file "$NEW_COMMIT_FILE" \
+    --report cursor_review_results/file_selection.json)
 
 if [ -z "$CODE_FILES" ]; then
-    echo "No code files changed. Skipping AI review."
+    echo "No reviewable source/configuration/build files changed. Skipping AI review."
     # Create empty artifacts to avoid GitLab CI upload errors
     mkdir -p cursor_review_results
     echo "[]" > cursor_review_results/code-quality-report.json
-    echo "No code files changed. Skipping AI review." > cursor_review_results/review_report.md
+    echo "No reviewable source/configuration/build files changed. Skipping AI review." > cursor_review_results/review_report.md
     exit 0
 fi
 
@@ -342,20 +345,11 @@ while IFS= read -r file; do
         fi
         FIRST_ENTRY=false
 
-        cat >> "$CODE_QUALITY_FILE" << EOENTRY
-  {
-    "description": "Cursor AI Code Review completed for this file. See full report in artifacts.",
-    "check_name": "cursor_ai_review",
-    "fingerprint": "$(echo -n "$file" | md5sum | cut -d' ' -f1)",
-    "severity": "info",
-    "location": {
-      "path": "$file",
-      "lines": {
-        "begin": 1
-      }
-    }
-  }
-EOENTRY
+        jq -n --arg file "$file" \
+            --arg fingerprint "$(printf '%s' "$file" | md5sum | cut -d' ' -f1)" \
+            '{description: "Cursor AI Code Review completed for this file. See full report in artifacts.",
+              check_name: "cursor_ai_review", fingerprint: $fingerprint, severity: "info",
+              location: {path: $file, lines: {begin: 1}}}' >> "$CODE_QUALITY_FILE"
     fi
 done <<< "$CODE_FILES"
 
@@ -376,7 +370,7 @@ if [ -n "$GITHUB_API_URL" ] && [ "$MR_IID" != "N/A" ]; then
         PATCH_IDS_MARKER=$(paste -sd, cursor_review_results/all_reviewed_patch_ids.txt)
         if [ -n "$PATCH_IDS_MARKER" ]; then
             echo "" >> "$REVIEW_OUTPUT"
-            echo "<!-- cursor-reviewed-patchids:$PATCH_IDS_MARKER -->" >> "$REVIEW_OUTPUT"
+            echo "<!-- ${PATCH_ID_MARKER}:$PATCH_IDS_MARKER -->" >> "$REVIEW_OUTPUT"
         fi
 
         # Format review as MR comment

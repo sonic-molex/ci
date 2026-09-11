@@ -147,7 +147,7 @@ def apply(plan_data, args, key):
             'title': 'ci: enable shared Cursor PR review',
             'head': args.branch, 'base': plan_data['base'],
             'body': (
-                f'Enable C/C++ PR review using `{args.shared_repo}/{ACTION}@{args.shared_ref}`. '
+                f'Enable source, interface, configuration and build-file PR review using `{args.shared_repo}/{ACTION}@{args.shared_ref}`. '
                 f'Only `{WORKFLOW}` is added or updated; review code stays in the shared action.\n\n'
                 'The repository-local `CURSOR_API_KEY` Actions secret has been configured. '
                 'PR comments use the built-in workflow token. Same-repository PRs only; '
