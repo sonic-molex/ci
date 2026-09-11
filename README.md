@@ -8,7 +8,7 @@ their own secrets; implementation, setup tools, tests and documentation live her
 
 | Module | Purpose | Consumer action |
 | --- | --- | --- |
-| [code-review](code-review/README.md) | Cursor C/C++ PR review, one-command onboarding and batch secret rotation | `sonic-molex/ci/code-review@main` |
+| [code-review](code-review/README.md) | Cursor multi-language PR review, one-command onboarding and batch secret rotation | `sonic-molex/ci/code-review@main` |
 
 Build, compilation and packaging pipelines will be added as independent modules
 when implemented.

@@ -95,13 +95,13 @@ replace the key in jobs that are already running. Keep the inventory current.
 
 ## Review behavior
 
-Review policy remains the port from Shasta
+Review derives from the port from Shasta
 `c45741109495652c809a1da326eeeccf334d0310` introduced in
 [sonic-optical-control PR #18](https://github.com/sonic-molex/sonic-optical-control/pull/18):
 
-- Model `cursor-grok-4.6-high` and the original prompt.
-- C/C++ files only; up to 15 files per PR, 1,000 diff lines per file.
-- Commit patch IDs restored from the first 100 PR conversation comments.
+- Model `cursor-grok-4.6-high`; the bug-focused prompt also covers scripts, schemas, configuration and builds.
+- Source, interface, configuration and build files; up to 15 files per PR, 1,000 diff lines per file.
+- Commit patch IDs restored from the first 100 PR conversation comments using the original marker.
 - New commit diffs reviewed per file; exact `✅ No bugs found` handling.
 - Markdown PR conversation comment and original JSON/report artifacts.
 - Same-repository PRs only, with a non-blocking job; no normal push trigger.
@@ -109,6 +109,32 @@ Review policy remains the port from Shasta
 Existing patch-ID tracking, truncation and failure-handling limitations remain.
 The GitLab Code Quality JSON is downloadable; GitHub does not render its widget.
 Model usage is charged to the account associated with each repository's key.
+
+### File coverage
+
+| Category | Extensions |
+| --- | --- |
+| C/C++ | `.c .cpp .cc .cxx .h .hpp .hxx` |
+| Other source/scripts | `.go .py .sh .lua .rs` |
+| Interfaces/models | `.yang .thrift .proto` |
+| Configuration | `.json .yml .yaml .xml .ini .conf .cfg .profile` |
+| Templates | `.j2` |
+| Build/patches | `.mk .cmake .dep .patch` |
+
+The Bash filter in [review.sh](review.sh) uses one `grep -E` extension allowlist.
+There are no special filename rules, blacklists, content inspection or separate
+selector. `go.mod`, `Makefile`, `Dockerfile` and `CMakeLists.txt` do not match.
+`Dockerfile.j2` matches `.j2`; `package-lock.json` matches `.json`. Extensions are
+matched exactly as listed, including case. Selected files are listed in the
+existing job log and review report; no additional selection JSON is generated.
+The existing 15-file budget and file-existence checks apply after filtering.
+Submodule source changes are not expanded. An unchanged rerun skips selection
+and the model as before. Existing branch triggers are not broadened.
+
+The original `cursor-reviewed-patchids` marker and deduplication behavior are
+unchanged. Previously reviewed patches are not automatically reconsidered when
+file coverage expands. Consumers using `@main` receive this change after a human
+merges the shared PR; no consumer entrypoint update is required.
 
 Consumer configuration:
 
