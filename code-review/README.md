@@ -101,7 +101,7 @@ Review derives from the port from Shasta
 
 - Model `cursor-grok-4.6-high`; the bug-focused prompt also covers scripts, schemas, configuration and builds.
 - Source, interface, configuration and build files; up to 15 files per PR, 1,000 diff lines per file.
-- Commit patch IDs restored from the first 100 PR conversation comments using the scope-v2 marker.
+- Commit patch IDs restored from the first 100 PR conversation comments using the original marker.
 - New commit diffs reviewed per file; exact `✅ No bugs found` handling.
 - Markdown PR conversation comment and original JSON/report artifacts.
 - Same-repository PRs only, with a non-blocking job; no normal push trigger.
@@ -112,29 +112,28 @@ Model usage is charged to the account associated with each repository's key.
 
 ### File coverage
 
-| Category | Covered examples |
+| Category | Extensions |
 | --- | --- |
-| Source | C/C++, Go, Python, Rust, JavaScript/TypeScript, Lua, Perl, Ruby, Java |
-| Scripts | Shell (`.sh`, `.bash`, `.ksh`, `.zsh`) and extensionless shebang scripts |
-| Interfaces | YANG, Thrift, Protobuf |
-| Configuration | **`.yml` and `.yaml`**, including GitHub Actions; JSON, TOML, INI, CFG, CONF, XML, `.profile`, `.yangjson` |
-| Templates | Jinja/Jinja2 (`.j2`, `.jinja`, `.jinja2`), `.tmpl`, `.template`, `.in` |
-| Build/deployment | Makefile and `.mk`/`.dep`, Dockerfile/Containerfile variants, CMake, Autotools, Meson, systemd unit files, Debian packaging controls and maintainer scripts, `.patch`/`.diff` |
-| Dependency manifests | `go.mod`, `requirements*.txt`, JSON/TOML manifests such as `package.json` and `Cargo.toml` |
+| C/C++ | `.c .cpp .cc .cxx .h .hpp .hxx` |
+| Other source/scripts | `.go .py .sh .lua .rs` |
+| Interfaces/models | `.yang .thrift .proto` |
+| Configuration | `.json .yml .yaml .xml .ini .conf .cfg .profile` |
+| Templates | `.j2` |
+| Build/patches | `.mk .cmake .dep .patch` |
 
-The exact allowlist is in [select_files.py](select_files.py). Documentation,
-dependency lockfiles, binary data, symlinks, deleted files and submodule pointers
-are excluded. There is no blanket exclusion of generated C/C++ or vendor source.
-Submodule source changes are not expanded. `file_selection.json` in artifacts
-records eligible files and exclusion reasons whenever there are new patch IDs;
-the existing 15-file budget is applied after selection. An unchanged rerun skips
-selection and the model as before. Existing branch triggers are not broadened.
+The Bash filter in [review.sh](review.sh) uses one `grep -E` extension allowlist.
+There are no special filename rules, blacklists, content inspection or separate
+selector. `go.mod`, `Makefile`, `Dockerfile` and `CMakeLists.txt` do not match.
+`Dockerfile.j2` matches `.j2`; `package-lock.json` matches `.json`. Extensions are
+matched exactly as listed, including case. Selected files are listed in the
+existing job log and review report; no additional selection JSON is generated.
+The existing 15-file budget and file-existence checks apply after filtering.
+Submodule source changes are not expanded. An unchanged rerun skips selection
+and the model as before. Existing branch triggers are not broadened.
 
-Scope-v2 uses `cursor-reviewed-patchids-v2`. Old C/C++-only markers are not reused:
-the first run on an existing PR reconsiders its commits so previously omitted
-languages are reviewed. Subsequent v2 runs retain patch-ID deduplication. There
-is no automatic backfill of closed PRs, and no model retraining or language-specific
-compiler validation. Consumers using `@main` receive this change after a human
+The original `cursor-reviewed-patchids` marker and deduplication behavior are
+unchanged. Previously reviewed patches are not automatically reconsidered when
+file coverage expands. Consumers using `@main` receive this change after a human
 merges the shared PR; no consumer entrypoint update is required.
 
 Consumer configuration:

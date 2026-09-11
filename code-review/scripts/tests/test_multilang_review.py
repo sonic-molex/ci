@@ -1,6 +1,5 @@
-"""Verify multi-language selection, consumer execution and scope migration."""
+"""Verify multi-language filtering, consumer execution and deduplication."""
 
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -10,53 +9,6 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location('select_files', ROOT / 'select_files.py')
-SELECTOR = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SELECTOR)
-
-
-class SelectionTest(unittest.TestCase):
-    def test_representative_file_types(self):
-        names = [
-            'source.cpp', 'header.h', 'source.go', 'source.py', 'source.rs', 'start.sh',
-            'model.yang', 'api.thrift', 'api.proto', '.github/workflows/review.yml',
-            'settings.yaml', 'settings.json', 'settings.xml', 'settings.toml',
-            'settings.ini', 'settings.conf', 'settings.cfg', 'Dockerfile',
-            'Dockerfile.j2', 'Dockerfile.build', 'Makefile', 'Makefile.work', 'rules.mk',
-            'CMakeLists.txt', 'build.cmake', 'configure.ac', 'Makefile.am',
-            'template.j2', 'service.service', 'debian/control', 'debian/postinst',
-            'sonic.install', 'go.mod', 'requirements-dev.txt', 'sai.profile',
-            'rules.dep', 'external-changes.patch', 'fix.diff', 'sonic.postinst', 'model.yangjson',
-        ]
-        with tempfile.TemporaryDirectory() as directory:
-            for name in names:
-                with self.subTest(name=name):
-                    path = Path(directory) / name
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_text('example\n')
-                    self.assertIsNone(SELECTOR.exclusion(path))
-            script = Path(directory) / 'extensionless'
-            script.write_text('#!/bin/sh\nexit 0\n')
-            self.assertIsNone(SELECTOR.exclusion(script))
-
-    def test_exclusions(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            for name, content, reason in [
-                ('README.md', b'document', 'documentation'),
-                ('package-lock.json', b'{}', 'generated dependency lockfile'),
-                ('go.sum', b'module checksum', 'generated dependency lockfile'),
-                ('binary.py', b'\0binary', 'binary'),
-                ('data.bin', b'text', 'unsupported file type'),
-            ]:
-                with self.subTest(name=name):
-                    path = root / name
-                    path.write_bytes(content)
-                    self.assertEqual(SELECTOR.exclusion(path), reason)
-            link = root / 'link.yml'
-            link.symlink_to(root / 'package-lock.json')
-            self.assertEqual(SELECTOR.exclusion(link), 'symlink')
-            self.assertIn('non-file', SELECTOR.exclusion(root / 'deleted.py'))
 
 
 class ConsumerTest(unittest.TestCase):
@@ -114,19 +66,47 @@ print('201' if 'POST' in sys.argv else os.environ.get('HISTORY_JSON', '[]'))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
+    def test_representative_file_types(self):
+        names = [
+            'source.c', 'source.cpp', 'source.cc', 'source.cxx',
+            'header.h', 'header.hpp', 'header.hxx',
+            'source.go', 'source.py', 'start.sh', 'script.lua', 'source.rs',
+            'model.yang', 'api.thrift', 'api.proto',
+            'settings.json', '.github/workflows/review.yml', 'settings.yaml',
+            'settings.xml', 'settings.ini', 'settings.conf', 'settings.cfg',
+            'sai.profile', 'Dockerfile.j2', 'rules.mk', 'build.cmake',
+            'rules.dep', 'external-changes.patch',
+        ]
+        self.commit({name: 'example\n' for name in names})
+        self.env['MAX_REVIEW_FILES'] = '100'
+        self.run_review()
+        quality = json.loads((self.consumer / 'cursor_review_results/code-quality-report.json').read_text())
+        self.assertEqual({entry['location']['path'] for entry in quality}, set(names))
+
+    def test_non_allowlisted_names_skip_model(self):
+        self.commit({'README.md': 'docs\n', 'go.mod': 'module example\n',
+                     'go.sum': 'module checksum\n', 'data.bin': b'\0binary',
+                     'Dockerfile': 'FROM scratch\n', 'Makefile': 'all:\n\ttrue\n',
+                     'CMakeLists.txt': 'project(example)\n', 'debian/control': 'Package: example\n',
+                     'settings.toml': 'enabled = true\n', 'service.service': '[Unit]\n',
+                     'source.js': 'const answer = 42;\n', 'source.PY': 'print(42)\n',
+                     'extensionless': '#!/bin/sh\nexit 0\n'})
+        self.run_review()
+        self.assertFalse((self.consumer / 'prompts.jsonl').exists())
+
     def test_mixed_files_and_escaped_paths_reach_model(self):
         eligible = {'worker.py': 'print(42)\n', 'worker.go': 'package main\n',
                     'schema.yang': 'module example {}\n', 'api.thrift': 'struct Item {}\n',
                     'api.proto': 'syntax = "proto3";\n', 'script.sh': '#!/bin/sh\nexit 0\n',
-                    'Makefile': 'all:\n\ttrue\n', 'Dockerfile': 'FROM scratch\n',
+                    'rules.mk': 'all:\n\ttrue\n', 'Dockerfile.j2': 'FROM scratch\n',
                     'config/quoted"name.yml': 'enabled: true\n',
-                    'config/settings.yaml': 'enabled: true\n', 'config.json': '{}\n'}
-        self.commit({**eligible, 'README.md': 'docs\n', 'binary.py': b'\0binary'})
+                    'config/settings.yaml': 'enabled: true\n', 'config.json': '{}\n',
+                    'package-lock.json': '{}\n'}
+        self.commit({**eligible, 'README.md': 'docs\n', 'data.bin': b'\0binary',
+                     'go.mod': 'module example\n', 'Dockerfile': 'FROM scratch\n'})
         self.run_review()
         artifacts = self.consumer / 'cursor_review_results'
-        selected = json.loads((artifacts / 'file_selection.json').read_text())
-        self.assertEqual(set(selected['eligible']), set(eligible))
-        self.assertEqual({entry['path'] for entry in selected['skipped']}, {'README.md', 'binary.py'})
+        self.assertFalse((artifacts / 'file_selection.json').exists())
         prompts = [json.loads(line) for line in (self.consumer / 'prompts.jsonl').read_text().splitlines()]
         self.assertEqual(len(prompts), len(eligible))
         for name in eligible:
@@ -134,13 +114,12 @@ print('201' if 'POST' in sys.argv else os.environ.get('HISTORY_JSON', '[]'))
         quality = json.loads((artifacts / 'code-quality-report.json').read_text())
         self.assertEqual({entry['location']['path'] for entry in quality}, set(eligible))
 
-    def test_old_marker_does_not_suppress_new_scope_but_v2_deduplicates(self):
+    def test_original_patch_marker_deduplicates(self):
         self.commit({'worker.go': 'package main\n', 'settings.yml': 'enabled: true\n'})
         patch = self.git('patch-id', '--stable', input=self.git('show', '--pretty=format:', 'HEAD')).split()[0]
-        self.env['HISTORY_JSON'] = json.dumps([{'body': f'<!-- cursor-reviewed-patchids:{patch} -->'}])
         self.run_review()
         report = (self.consumer / 'cursor_review_results/review_report.md').read_text()
-        self.assertIn(f'<!-- cursor-reviewed-patchids-v2:{patch} -->', report)
+        self.assertIn(f'<!-- cursor-reviewed-patchids:{patch} -->', report)
         before = (self.consumer / 'prompts.jsonl').read_text()
         self.env['HISTORY_JSON'] = json.dumps([{'body': report}])
         result = self.run_review()
